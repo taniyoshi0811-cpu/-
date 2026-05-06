@@ -1,0 +1,573 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>文化祭予算管理サイト（管理者）</title>
+  <style>
+    :root {
+      --bg: #f3f5fb;
+      --card: #ffffff;
+      --text: #1f2937;
+      --muted: #6b7280;
+      --border: #e5e7eb;
+      --primary: #4f46e5;
+      --danger: #dc2626;
+      --ok: #059669;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Yu Gothic UI", "Meiryo", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+    .container {
+      max-width: 920px;
+      margin: 24px auto;
+      padding: 0 16px;
+    }
+    h1 { margin: 0 0 14px; }
+    h2 { margin: 0 0 12px; font-size: 18px; }
+    .summary {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px;
+    }
+    .label { color: var(--muted); font-size: 12px; margin-bottom: 6px; }
+    .value { font-size: 22px; font-weight: 700; }
+    .value.ok { color: var(--ok); }
+    .value.danger { color: var(--danger); }
+    .panel {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+    form {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 10px;
+      align-items: end;
+    }
+    .field label {
+      display: block;
+      color: var(--muted);
+      font-size: 12px;
+      margin-bottom: 4px;
+    }
+    input, select, button {
+      width: 100%;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px;
+      font-size: 14px;
+      background: #fff;
+    }
+    button {
+      border: none;
+      color: #fff;
+      background: var(--primary);
+      cursor: pointer;
+      font-weight: 700;
+    }
+    button.secondary { background: #111827; }
+    button.danger { background: var(--danger); }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    th, td {
+      border-bottom: 1px solid var(--border);
+      padding: 10px 8px;
+      text-align: left;
+      font-size: 14px;
+    }
+    th { color: var(--muted); font-weight: 600; }
+    .empty { color: var(--muted); padding: 12px 6px; }
+    .receipt-thumb {
+      width: 56px;
+      height: 56px;
+      object-fit: cover;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      cursor: zoom-in;
+      display: block;
+    }
+    .receipt-modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.65);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      z-index: 999;
+    }
+    .receipt-modal[hidden] { display: none; }
+    .receipt-modal img {
+      max-width: min(92vw, 980px);
+      max-height: 88vh;
+      border-radius: 12px;
+      background: #fff;
+    }
+    .receipt-close {
+      position: fixed;
+      top: 16px;
+      right: 16px;
+      width: auto;
+      padding: 8px 12px;
+      background: #111827;
+      color: #fff;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+    }
+    .receipt-filter {
+      display: grid;
+      grid-template-columns: minmax(200px, 320px);
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+    .receipt-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+      gap: 10px;
+    }
+    .receipt-grid-item {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 8px;
+      background: #fff;
+    }
+    .receipt-grid-item img {
+      width: 100%;
+      height: 110px;
+      object-fit: cover;
+      border-radius: 8px;
+      cursor: zoom-in;
+      display: block;
+      margin-bottom: 6px;
+    }
+    .receipt-grid-note {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.4;
+      word-break: break-word;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>文化祭予算管理サイト（管理者）</h1>
+
+    <section class="panel">
+      <h2>利用URL</h2>
+      <div class="empty">管理者URL: <code>/</code></div>
+      <div class="empty">利用者入力URL: <code>/input.html</code> （例: <code>/input.html?name=tanaka</code>）</div>
+    </section>
+
+    <section class="summary">
+      <div class="card">
+        <div class="label">文化祭の予算</div>
+        <div id="budgetValue" class="value">¥0</div>
+      </div>
+      <div class="card">
+        <div class="label">文化祭の支出合計</div>
+        <div id="spentValue" class="value">¥0</div>
+      </div>
+      <div class="card">
+        <div class="label">残り予算</div>
+        <div id="remainValue" class="value">¥0</div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>文化祭予算を設定</h2>
+      <form id="budgetForm">
+        <div class="field">
+          <label for="monthlyBudget">文化祭の予算（円）</label>
+          <input id="monthlyBudget" type="number" min="0" required placeholder="例: 50000" />
+        </div>
+        <div>
+          <button type="submit">保存</button>
+        </div>
+      </form>
+    </section>
+
+    <section class="summary">
+      <div class="card">
+        <div class="label">大本の予算</div>
+        <div id="masterBudgetValue" class="value">¥0</div>
+      </div>
+      <div class="card">
+        <div class="label">大本の使用額</div>
+        <div id="masterUsedValue" class="value">¥0</div>
+      </div>
+      <div class="card">
+        <div class="label">大本の残高</div>
+        <div id="masterRemainValue" class="value">¥0</div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>大本の金額を設定</h2>
+      <form id="masterForm">
+        <div class="field">
+          <label for="masterBudget">大本の予算（円）</label>
+          <input id="masterBudget" type="number" min="0" required placeholder="例: 300000" />
+        </div>
+        <div class="field">
+          <label for="masterUsed">大本の使用額（円）</label>
+          <input id="masterUsed" type="number" min="0" required placeholder="例: 65000" />
+        </div>
+        <div>
+          <button type="submit">保存</button>
+        </div>
+      </form>
+    </section>
+
+    <section class="panel">
+      <h2>支出を追加</h2>
+      <form id="expenseForm">
+        <div class="field">
+          <label for="expenseDate">日付</label>
+          <input id="expenseDate" type="date" required />
+        </div>
+        <div class="field">
+          <label for="expenseAmount">金額（円）</label>
+          <input id="expenseAmount" type="number" min="1" required placeholder="例: 1200" />
+        </div>
+        <div class="field">
+          <label for="expenseReceipt">レシート画像</label>
+          <input id="expenseReceipt" type="file" accept="image/*" />
+        </div>
+        <div class="field">
+          <label for="expenseMemo">メモ</label>
+          <input id="expenseMemo" type="text" placeholder="例: コンビニ" />
+        </div>
+        <div class="field">
+          <label for="expenseUser">入力者</label>
+          <input id="expenseUser" type="text" placeholder="例: admin" />
+        </div>
+        <div>
+          <button type="submit">追加</button>
+        </div>
+      </form>
+    </section>
+
+    <section class="panel">
+      <h2>レシートを日付でまとめて確認</h2>
+      <div class="receipt-filter">
+        <div class="field">
+          <label for="receiptDateSelect">日付を選択</label>
+          <select id="receiptDateSelect"></select>
+        </div>
+      </div>
+      <div id="receiptByDateArea" class="receipt-grid"></div>
+    </section>
+
+    <section class="panel">
+      <h2>支出一覧</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>日付</th>
+            <th>金額</th>
+            <th>メモ</th>
+            <th>レシート</th>
+            <th>入力者</th>
+            <th>操作</th>
+          </tr>
+        </thead>
+        <tbody id="expenseTableBody"></tbody>
+      </table>
+      <div style="margin-top: 10px;">
+        <button id="clearAllBtn" class="secondary" type="button">全データ削除</button>
+      </div>
+    </section>
+  </div>
+
+  <div id="receiptModal" class="receipt-modal" hidden>
+    <button id="receiptCloseBtn" class="receipt-close" type="button">閉じる</button>
+    <img id="receiptModalImage" alt="レシート画像" />
+  </div>
+
+  <script>
+    const API_BASE = "/api";
+    const yen = new Intl.NumberFormat("ja-JP", {
+      style: "currency",
+      currency: "JPY",
+      maximumFractionDigits: 0
+    });
+
+    const defaultState = { budget: 0, masterBudget: 0, masterUsed: 0, expenses: [] };
+
+    function todayISO() {
+      const d = new Date();
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, "0");
+      const day = String(d.getDate()).padStart(2, "0");
+      return `${y}-${m}-${day}`;
+    }
+
+    let state = { ...defaultState };
+
+    const budgetValue = document.getElementById("budgetValue");
+    const spentValue = document.getElementById("spentValue");
+    const remainValue = document.getElementById("remainValue");
+    const masterBudgetValue = document.getElementById("masterBudgetValue");
+    const masterUsedValue = document.getElementById("masterUsedValue");
+    const masterRemainValue = document.getElementById("masterRemainValue");
+    const monthlyBudget = document.getElementById("monthlyBudget");
+    const budgetForm = document.getElementById("budgetForm");
+    const masterBudget = document.getElementById("masterBudget");
+    const masterUsed = document.getElementById("masterUsed");
+    const masterForm = document.getElementById("masterForm");
+
+    const expenseForm = document.getElementById("expenseForm");
+    const expenseDate = document.getElementById("expenseDate");
+    const expenseAmount = document.getElementById("expenseAmount");
+    const expenseReceipt = document.getElementById("expenseReceipt");
+    const expenseMemo = document.getElementById("expenseMemo");
+    const expenseUser = document.getElementById("expenseUser");
+    const expenseTableBody = document.getElementById("expenseTableBody");
+    const clearAllBtn = document.getElementById("clearAllBtn");
+    const receiptDateSelect = document.getElementById("receiptDateSelect");
+    const receiptByDateArea = document.getElementById("receiptByDateArea");
+    const receiptModal = document.getElementById("receiptModal");
+    const receiptModalImage = document.getElementById("receiptModalImage");
+    const receiptCloseBtn = document.getElementById("receiptCloseBtn");
+
+    async function api(path, options = {}) {
+      try {
+        const res = await fetch(`${API_BASE}${path}`, {
+          headers: { "Content-Type": "application/json" },
+          ...options
+        });
+        if (!res.ok) throw new Error("APIエラー");
+        return res.json();
+      } catch {
+        throw new Error("サーバーに接続できません。http://localhost:3000 で開いているか確認してください。");
+      }
+    }
+
+    async function loadState() {
+      const data = await api("/state");
+      state = {
+        budget: Number(data.budget) || 0,
+        masterBudget: Number(data.masterBudget) || 0,
+        masterUsed: Number(data.masterUsed) || 0,
+        expenses: Array.isArray(data.expenses) ? data.expenses : []
+      };
+    }
+
+    function renderSummary() {
+      const spent = state.expenses.reduce((sum, row) => sum + row.amount, 0);
+      const remain = state.budget - spent;
+      const masterRemain = state.masterBudget - state.masterUsed;
+
+      budgetValue.textContent = yen.format(state.budget);
+      spentValue.textContent = yen.format(spent);
+      remainValue.textContent = yen.format(remain);
+      masterBudgetValue.textContent = yen.format(state.masterBudget);
+      masterUsedValue.textContent = yen.format(state.masterUsed);
+      masterRemainValue.textContent = yen.format(masterRemain);
+
+      remainValue.classList.toggle("ok", remain >= 0);
+      remainValue.classList.toggle("danger", remain < 0);
+      masterRemainValue.classList.toggle("ok", masterRemain >= 0);
+      masterRemainValue.classList.toggle("danger", masterRemain < 0);
+    }
+
+    function fileToDataUrl(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = () => reject(new Error("画像の読み込みに失敗しました。"));
+        reader.readAsDataURL(file);
+      });
+    }
+
+    function renderTable() {
+      if (state.expenses.length === 0) {
+        expenseTableBody.innerHTML = '<tr><td colspan="6" class="empty">支出データがありません。</td></tr>';
+        return;
+      }
+
+      const sorted = [...state.expenses].sort((a, b) => b.date.localeCompare(a.date));
+      expenseTableBody.innerHTML = sorted
+        .map((row) => `
+          <tr>
+            <td>${row.date}</td>
+            <td>${yen.format(row.amount)}</td>
+            <td>${row.memo || ""}</td>
+            <td>${row.receiptImage ? `<img src="${row.receiptImage}" alt="レシート画像" class="receipt-thumb" data-receipt-image="${row.receiptImage}" />` : "-"}</td>
+            <td>${row.user || "-"}</td>
+            <td><button class="danger" type="button" data-id="${row.id}">削除</button></td>
+          </tr>`)
+        .join("");
+    }
+
+    function renderReceiptByDate() {
+      const withReceipt = state.expenses.filter((row) => row.receiptImage);
+      if (withReceipt.length === 0) {
+        receiptDateSelect.innerHTML = '<option value="">レシート画像なし</option>';
+        receiptByDateArea.innerHTML = '<div class="empty">表示できるレシート画像がありません。</div>';
+        return;
+      }
+
+      const dates = [...new Set(withReceipt.map((row) => row.date))].sort((a, b) => b.localeCompare(a));
+      const selected = dates.includes(receiptDateSelect.value) ? receiptDateSelect.value : dates[0];
+
+      receiptDateSelect.innerHTML = dates
+        .map((date) => `<option value="${date}">${date}</option>`)
+        .join("");
+      receiptDateSelect.value = selected;
+
+      const filtered = withReceipt.filter((row) => row.date === selected);
+      receiptByDateArea.innerHTML = filtered
+        .map((row) => `
+          <div class="receipt-grid-item">
+            <img src="${row.receiptImage}" alt="レシート画像" data-receipt-image="${row.receiptImage}" />
+            <div class="receipt-grid-note">${yen.format(row.amount)} / ${row.user || "-"}</div>
+            <div class="receipt-grid-note">${row.memo || "メモなし"}</div>
+          </div>
+        `)
+        .join("");
+    }
+
+    function openReceiptModal(src) {
+      receiptModalImage.src = src;
+      receiptModal.hidden = false;
+    }
+
+    function closeReceiptModal() {
+      receiptModal.hidden = true;
+      receiptModalImage.src = "";
+    }
+
+    function renderAll() {
+      monthlyBudget.value = state.budget || "";
+      masterBudget.value = state.masterBudget || "";
+      masterUsed.value = state.masterUsed || "";
+      renderSummary();
+      renderReceiptByDate();
+      renderTable();
+    }
+
+    masterForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      try {
+        await api("/admin/settings", {
+          method: "POST",
+          body: JSON.stringify({
+            masterBudget: Math.max(0, Number(masterBudget.value) || 0),
+            masterUsed: Math.max(0, Number(masterUsed.value) || 0)
+          })
+        });
+        await loadState();
+        renderAll();
+      } catch (err) {
+        alert(err.message);
+      }
+    });
+
+    budgetForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      try {
+        await api("/admin/settings", {
+          method: "POST",
+          body: JSON.stringify({ budget: Math.max(0, Number(monthlyBudget.value) || 0) })
+        });
+        await loadState();
+        renderAll();
+      } catch (err) {
+        alert(err.message);
+      }
+    });
+
+    expenseForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const amount = Number(expenseAmount.value);
+      if (!expenseDate.value || amount <= 0) return;
+
+      try {
+        let receiptImage = "";
+        const receiptFile = expenseReceipt.files && expenseReceipt.files[0];
+        if (receiptFile) {
+          receiptImage = await fileToDataUrl(receiptFile);
+        }
+
+        await api("/expenses", {
+          method: "POST",
+          body: JSON.stringify({
+            date: expenseDate.value,
+            amount,
+            memo: expenseMemo.value.trim(),
+            user: expenseUser.value.trim() || "admin",
+            receiptImage
+          })
+        });
+        await loadState();
+        expenseForm.reset();
+        expenseDate.value = todayISO();
+        renderAll();
+      } catch (err) {
+        alert(err.message);
+      }
+    });
+
+    expenseTableBody.addEventListener("click", async (e) => {
+      const thumb = e.target.closest("[data-receipt-image]");
+      if (thumb) {
+        openReceiptModal(thumb.dataset.receiptImage);
+        return;
+      }
+
+      const btn = e.target.closest("button[data-id]");
+      if (!btn) return;
+
+      try {
+        await api(`/expenses/${btn.dataset.id}`, { method: "DELETE" });
+        await loadState();
+        renderAll();
+      } catch (err) {
+        alert(err.message);
+      }
+    });
+
+    receiptCloseBtn.addEventListener("click", closeReceiptModal);
+    receiptModal.addEventListener("click", (e) => {
+      if (e.target === receiptModal) closeReceiptModal();
+    });
+
+    receiptDateSelect.addEventListener("change", renderReceiptByDate);
+
+    clearAllBtn.addEventListener("click", async () => {
+      const ok = confirm("予算と支出の全データを削除します。よろしいですか？");
+      if (!ok) return;
+      try {
+        await api("/state", { method: "DELETE" });
+        await loadState();
+        renderAll();
+      } catch (err) {
+        alert(err.message);
+      }
+    });
+
+    expenseDate.value = todayISO();
+    loadState().then(renderAll).catch(() => {
+      alert("サーバーに接続できません。`node server.js` を実行して http://localhost:3000 で開いてください。");
+    });
+  </script>
+</body>
+</html>

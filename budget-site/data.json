@@ -1,0 +1,15 @@
+{
+  "budget": 0,
+  "masterBudget": 0,
+  "masterUsed": 0,
+  "expenses": [
+    {
+      "id": "f81b69bb-3e8b-41ad-97de-d93be0f99c94",
+      "date": "2026-05-01",
+      "amount": 1234,
+      "memo": "image test",
+      "user": "admin",
+      "receiptImage": "data:image/png;base64,iVBORw0KGgo="
+    }
+  ]
+}
